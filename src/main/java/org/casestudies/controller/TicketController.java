@@ -2,6 +2,7 @@ package org.casestudies.controller;
 
 import org.casestudies.dtos.*;
 import org.casestudies.model.Ticket;
+import org.casestudies.model.Bill;
 import org.casestudies.enums.ResponseStatus;
 import org.casestudies.service.TicketService;
 import org.casestudies.exception.ParkingLotException;
@@ -30,6 +31,27 @@ public class TicketController {
             responseDto.setTicket(ticket);
             responseDto.setResponseStatus(ResponseStatus.SUCCESS);
 
+        } catch (ParkingLotException exception) {
+            responseDto.setResponseStatus(ResponseStatus.FAILURE);
+            responseDto.setErrorMessage(exception.getMessage());
+        }
+
+        return responseDto;
+    }
+
+    public ProcessExitResponseDto processExit(ProcessExitRequestDto requestDto) {
+        ProcessExitResponseDto responseDto = new ProcessExitResponseDto();
+
+        if (requestDto == null) {
+            responseDto.setResponseStatus(ResponseStatus.FAILURE);
+            responseDto.setErrorMessage("Request cannot be null");
+            return responseDto;
+        }
+
+        try {
+            Bill bill = ticketService.processExit(requestDto.getTicketId());
+            responseDto.setBill(bill);
+            responseDto.setResponseStatus(ResponseStatus.SUCCESS);
         } catch (ParkingLotException exception) {
             responseDto.setResponseStatus(ResponseStatus.FAILURE);
             responseDto.setErrorMessage(exception.getMessage());

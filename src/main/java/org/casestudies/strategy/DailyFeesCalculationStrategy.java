@@ -16,8 +16,8 @@ public class DailyFeesCalculationStrategy implements FeesCalculationStrategy {
 
         LocalDateTime now = LocalDateTime.now();
 
-        long durationMs = Duration.between(ticket.getEntryTime(), now).toHours();
-        long days = Math.max(1, durationMs / (1000 * 60 * 60 * 24));     // choose the larger value between 1 and hours.
+        long durationHours = Duration.between(ticket.getEntryTime(), now).toHours();
+        long days = Math.max(1, durationHours / 24);     // choose the larger value between 1 and days.
         return days * RATE_PER_DAY;
     }
 }

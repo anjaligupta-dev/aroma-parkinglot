@@ -2,10 +2,9 @@ package org.casestudies.service;
 
 import org.casestudies.enums.*;
 import org.casestudies.model.*;
-import org.casestudies.repository.TicketRepository;
+import org.casestudies.strategy.*;
+import org.casestudies.repository.*;
 import org.casestudies.exception.ParkingLotException;
-import org.casestudies.repository.ParkingLotRepository;
-import org.casestudies.strategy.SpotAssignmentStrategy;
 
 import java.time.LocalDateTime;
 
@@ -14,12 +13,16 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final SpotAssignmentStrategy spotAssignmentStrategy;
     private final ParkingLotRepository parkingLotRepository;
+    private final FeesCalculationStrategy feesCalculationStrategy;
 
-    public TicketService(TicketRepository ticketRepository, SpotAssignmentStrategy spotAssignmentStrategy, ParkingLotRepository parkingLotRepository) {
+
+    public TicketService(TicketRepository ticketRepository, SpotAssignmentStrategy spotAssignmentStrategy, ParkingLotRepository parkingLotRepository, FeesCalculationStrategy feesCalculationStrategy) {
         this.ticketRepository = ticketRepository;
         this.spotAssignmentStrategy = spotAssignmentStrategy;
         this.parkingLotRepository = parkingLotRepository;
+        this.feesCalculationStrategy = feesCalculationStrategy;
     }
+
 
     public Ticket generateTicket(Vehicle vehicle, EntryGate entryGate, SpotType spotType, Long parkingLotId) {
         // Validate vehicle
@@ -50,7 +53,6 @@ public class TicketService {
             throw new ParkingLotException("Parking lot id is required");
         }
 
-
         // Find parking lot
         ParkingLot parkingLot = parkingLotRepository.getById(parkingLotId);
 
@@ -68,7 +70,6 @@ public class TicketService {
             throw new ParkingLotException("Entry gate is closed");
         }
 
-
         // Find a suitable parking spot using the configured strategy
         ParkingSpot parkingSpot = spotAssignmentStrategy.assignSpot(parkingLot, spotType);
 
@@ -78,7 +79,6 @@ public class TicketService {
 
         // Mark the assigned spot as occupied
         parkingSpot.setParkingSpotStatus(ParkingSpotStatus.OCCUPIED);
-
 
         // Create ticket
         Ticket ticket = new Ticket();
@@ -91,5 +91,35 @@ public class TicketService {
 
         // Persist ticket
         return ticketRepository.save(ticket);
+    }
+
+
+    public Bill processExit(Long ticketId) {
+        // Validate ticket ID
+        if (ticketId == null) {
+            throw new ParkingLotException("Ticket id is required");
+        }
+
+        // Find the ticket
+        Ticket ticket = ticketRepository.getById(ticketId);
+
+        if (ticket == null) {
+            throw new ParkingLotException("Ticket not found");
+        }
+
+        // Calculate parking fee
+        double amount = feesCalculationStrategy.calculateFees(ticket);
+
+        // Release the parking spot
+        if (ticket.getParkingSpot() != null) {
+            ticket.getParkingSpot().setParkingSpotStatus(ParkingSpotStatus.AVAILABLE);
+        }
+
+        // Create Bill
+        Bill bill = new Bill();
+        bill.setTicket(ticket);
+        bill.setAmount(amount);
+
+        return bill;
     }
 }
